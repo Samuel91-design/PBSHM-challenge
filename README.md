@@ -1,6 +1,6 @@
 # PBSHM Coding Challenge
 
-**Structural Health Monitoring Group | ETH IBK**
+**Chair of Structural Mechanics and Monitoring | ETH Zurich**
 
 ## Overview
 

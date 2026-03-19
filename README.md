@@ -8,12 +8,6 @@ This repository contains a small take-home coding exercise on **Population-Based
 
 You will work with a simulated population of 50 shear-frame structures with a **variable number of storeys (4-8)**. The goal is to detect whether a structure is damaged and, if time permits, explore whether graph-based learning can support **damage localization** through node- or edge-level damage indicators.
 
-This revised version is intentionally beginner-friendly:
-
-- the assignment starts with exploratory analysis and simple baselines
-- the GNN is part of the progression, not the only meaningful task
-- the candidate-facing data is framed as **measurement-like inputs**, not direct access to latent simulator state
-
 ## What Is Simulated vs. What You Should Use
 
 The dataset was generated from an `N`-DOF lumped-mass shear-frame model with localized stiffness reduction used to simulate damage. We provide the generation script so the physical assumptions are transparent.
@@ -128,7 +122,7 @@ If you choose a GNN, a sensible pattern is:
 
 The emphasis is on whether the graph formulation is well-motivated and interpretable.
 
-### Task 5 - Population-level graph extension (recommended for stronger candidates)
+### Task 5 - Population-level graph extension 
 
 Use the population graph to explore transfer across structures.
 

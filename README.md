@@ -77,7 +77,7 @@ Task 5 → Population-graph extensions
 
 ### 3. Run Tasks Individually
 
-Each notebook in `pbshm_tasks/` is fully self-contained. Open any task notebook and run all cells. Every modelling function is defined inline with explanatory comments.
+Each notebook is fully self-contained. Open any task notebook and run all cells. Every modelling function is defined inline with explanatory comments.
 
 ---
 

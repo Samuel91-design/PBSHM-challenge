@@ -27,6 +27,8 @@ A Graph Neural Network (GNN) pipeline for **damage detection** and **damage loca
 
 - Detect whether a structure is damaged using measurement-like features and graph structure.
 
+- Discuss whether the graph formulation is well-motivated and interpretable.
+
 ---
 ## Repository Layout
 

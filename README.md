@@ -79,29 +79,6 @@ Task 5 → Population-graph extensions
 
 Each notebook in `pbshm_tasks/` is fully self-contained. Open any task notebook and run all cells. Every modelling function is defined inline with explanatory comments.
 
-### 4. Entry Point (Task 4 — GNN)
-
-The GNN pipeline is driven by three function calls:
-
-```python
-# 1. Load raw data
-structures, nodes_df, structure_df, edges_df, weights_df, labels_df = load_and_prepare_data(
-    structures_json_path = "structures_measurements.json",
-    labels_csv_path      = "structure_labels.csv",
-    edges_csv_path       = "population_edges_geometry.csv",
-    weights_csv_path     = "population_edge_weights_geometry.csv"
-)
-
-# 2. Build graph dataset (two-pass, leakage-free)
-graph_dataset, structure_labels = prepare_graph_dataset(structures, labels_df)
-
-# 3. Train + evaluate with stratified K-Fold CV
-best_model, accuracies, f1s, aucs = train_and_evaluate(graph_dataset, structure_labels, number_of_folds=3)
-
-# 4. Visualise node-level interpretability
-visualize_structure_and_node_predictions(best_model, graph_dataset, structure_id_list=[3, 8, 17, 28, 24, 4])
-```
-
 ---
 
 ## Key Design Decisions

@@ -1,175 +1,209 @@
-# PBSHM Coding Challenge
+# Structure-Informed GNN for Population-Based Structural Health Monitoring
 
-**Chair of Structural Mechanics and Monitoring | ETH Zurich**
+A physics-aware Graph Neural Network (GNN) pipeline for **damage detection** and **damage localisation** across a synthetic population of multi-storey structures. The project progresses from exploratory data analysis through supervised/unsupervised baselines to a full graph-based model, following the Population-Based SHM (PBSHM) paradigm.
 
-## Overview
+---
 
-This repository contains a small take-home coding exercise on **Population-Based Structural Health Monitoring (PBSHM)**.
+## Repository Layout
 
-You will work with a simulated population of 50 shear-frame structures with a **variable number of storeys (4-8)**. The goal is to detect whether a structure is damaged and, if time permits, explore whether graph-based learning can support **damage localization** through node- or edge-level damage indicators.
+```
+├── main_summary.ipynb                   # Master notebook — runs all tasks end-to-end
+├── task1_explore_population.ipynb       # EDA: dataset exploration & feature engineering
+├── task2_structure_bl_model.ipynb       # Supervised baselines (Random Forest, Logistic Regression)
+├── task3_anoms_bl_model.ipynb           # Unsupervised baselines (Isolation Forest, K-Means)
+├── task4_gb_model_gnn.ipynb             # Graph-based GNN model (this pipeline)
+├── task5_population_gb.ipynb            # Population-graph extensions
+├── structures_measurements.json         # Per-structure graph topology + node-level measurements
+├── structure_labels.csv                 # Structure-level damage labels + true damaged storey
+├── population_edges_geometry.csv        # Population graph edges (geometry-based)
+├── population_edge_weights_geometry.csv # Population graph edge weights (cosine similarity)
+├── population_metadata.json             # Dataset summary and field descriptions
+└── generate_dataset_revised.py          # Reference synthetic data generator
+```
 
-## What Is Simulated vs. What You Should Use
+---
 
-The dataset was generated from an `N`-DOF lumped-mass shear-frame model with localized stiffness reduction used to simulate damage. We provide the generation script so the physical assumptions are transparent.
+## How to Run
 
-However, for the purposes of this exercise, assume that in deployment you **do not directly know the true damaged stiffness values or other hidden simulator state**. Your method should be built from the provided measurement-like quantities, graph structure, and labels.
+### 1. Install Dependencies
 
-In other words:
+```bash
+pip install torch torchvision torchaudio
+pip install torch-geometric
+pip install scikit-learn pandas numpy matplotlib seaborn networkx
+```
 
-- the simulation model is disclosed for physical clarity
-- the inference task should use the provided candidate-facing files
-- do not treat hidden physical parameters as measured inputs at rollout time
+> **GPU:** The training loop auto-detects CUDA. CPU is fully supported for this dataset size.
 
-## Dataset
+### 2. Run Everything (Recommended)
 
-The dataset files are located in this repository.
+Open and run **`main_summary.ipynb`** top to bottom. It imports and executes each task in order:
 
-### Files
+```
+Task 1 → EDA & feature engineering
+Task 2 → Supervised baselines
+Task 3 → Unsupervised anomaly detection
+Task 4 → GNN graph-based model
+Task 5 → Population-graph extensions
+```
 
-| File | Description |
+### 3. Run Tasks Individually
+
+Each notebook in `pbshm_tasks/` is fully self-contained. Open any task notebook and run all cells. Every modelling function is defined inline with explanatory comments.
+
+### 4. Entry Point (Task 4 — GNN)
+
+The GNN pipeline is driven by three function calls:
+
+```python
+# 1. Load raw data
+structures, nodes_df, structure_df, edges_df, weights_df, labels_df = load_and_prepare_data(
+    structures_json_path = "structures_measurements.json",
+    labels_csv_path      = "structure_labels.csv",
+    edges_csv_path       = "population_edges_geometry.csv",
+    weights_csv_path     = "population_edge_weights_geometry.csv"
+)
+
+# 2. Build graph dataset (two-pass, leakage-free)
+graph_dataset, structure_labels = prepare_graph_dataset(structures, labels_df)
+
+# 3. Train + evaluate with stratified K-Fold CV
+best_model, accuracies, f1s, aucs = train_and_evaluate(graph_dataset, structure_labels, number_of_folds=3)
+
+# 4. Visualise node-level interpretability
+visualize_structure_and_node_predictions(best_model, graph_dataset, structure_id_list=[3, 8, 17, 28, 24, 4])
+```
+
+---
+
+## Key Design Decisions
+
+### Graph Representation
+
+Each structure is modelled as a **directed sequential graph** where nodes are storeys and edges encode inter-storey transitions. This directly mirrors the physical system: damage manifests as a stiffness discontinuity between adjacent storeys, which edge features are designed to capture explicitly.
+
+**Node features (4 dimensions, globally StandardScaled):**
+
+| Feature | Physical Motivation |
 |---|---|
-| `structures_measurements.json` | Candidate-facing inputs: one entry per structure with graph topology and measurement-like node features |
-| `structure_labels.csv` | Structure-level detection label and true damaged storey for evaluation / optional localization analysis |
-| `population_edges_geometry.csv` | Starter population graph built from geometry-only summaries |
-| `population_edge_weights_geometry.csv` | Same edges with cosine similarity weights |
-| `population_metadata.json` | Dataset summary and field descriptions |
-| `generate_dataset_revised.py` | Reference generator showing how the synthetic data was created |
+| `height_m` | Storey elevation — proxy for gravitational load distribution |
+| `dominant_modal_frequency_Hz²` | Proportional to lateral stiffness (Rayleigh quotient) |
+| `abs_freq²_diff` | Sequential stiffness change between adjacent storeys |
+| `local_freq²_dev` | Deviation from structure's own mean — internal anomaly signal |
 
-### Structure of `structures_measurements.json`
+**Edge features (5 dimensions, unscaled — ratio-based):**
 
-Each structure contains:
-
-- `structure_id`
-- `n_storeys`
-- `edges`
-- `node_features`
-- `feature_names`
-
-Each node currently includes:
-
-- `storey`
-- `height_m`
-- `dominant_modal_frequency_Hz`
-
-These are intended as lightweight, measurement-like features for a toy exercise. You may derive additional node, edge, or graph features from them if helpful.
-
-### Labels
-
-`structure_labels.csv` contains:
-
-- `structure_id`
-- `damaged` as a binary structure-level label
-- `damage_storey` as the true damaged location for optional localization analysis
-
-The structure-level label is the main supervision target. The storey-level target is included so that stronger candidates can explore approximate localization or node/edge damage indicators.
-
-## Tasks
-
-### Task 1 - Explore the population
-
-Characterize the dataset and explain the variation across the population.
-
-- Visualize the distribution of structure sizes and geometry
-- Explore the starter population graph
-- Inspect the provided measurement-like node features
-- Propose which raw or derived features might be damage-sensitive
-
-We are looking for physical intuition and clear coding, not just plots.
-
-### Task 2 - Simple structure-level baseline
-
-Build a simple baseline for **damage detection** using fixed-length summaries of each structure.
-
-Examples include:
-
-- logistic regression
-- random forest
-- support vector machine
-- a small MLP
-
-Because structures have different numbers of nodes, you will need to design a sensible summary representation.
-
-Report appropriate metrics such as accuracy, F1, and ROC-AUC using cross-validation.
-
-### Task 3 - Unsupervised or anomaly-based baseline
-
-Implement at least one simpler exploratory method that does not rely on a graph neural network.
-
-Examples include:
-
-- clustering on structure-level summaries
-- PCA or other embedding plus visual separation
-- nearest-neighbor anomaly scoring
-- isolation forest or another anomaly detector
-
-Discuss whether damaged structures appear separable and what the limitations of these simpler methods are.
-
-### Task 4 - Graph-based extension
-
-Implement a graph-based model that uses the **within-structure graph** and compare it to your simpler baselines.
-
-You may:
-
-- perform graph-level damage detection
-- estimate node- or edge-level damage indicators
-- or do both
-
-If you choose a GNN, a sensible pattern is:
-
-1. encode each structure graph
-2. pool node information into a structure representation for detection
-3. inspect node embeddings or scores for approximate localization
-
-The emphasis is on whether the graph formulation is well-motivated and interpretable.
-
-### Task 5 - Population-level graph extension 
-
-Use the population graph to explore transfer across structures.
-
-- Start from the provided geometry-based population graph or build your own
-- Test whether population information helps with detection on unseen structures
-- Reflect on when population message passing helps and when it may mislead
-
-You do not need to complete this task fully to produce a strong submission.
-
-## Deliverables
-
-1. Runnable code in your preferred language
-2. A short `README` explaining how to run the work and key design decisions
-3. A short slide deck for a 10-minute presentation
-
-## What We Are Assessing
-
-We care about:
-
-- clear and reproducible code
-- sensible handling of variable-size graphs
-- ability to build and justify simple baselines
-- whether graph methods are used thoughtfully rather than by default
-- physical interpretation of the results
-
-Clarity of reasoning matters more than headline accuracy.
-
-## Suggested Marking Rubric
-
-| Criterion | Points |
+| Feature | Physical Motivation |
 |---|---|
-| Code correctness and reproducibility | 20 |
-| Exploratory analysis and feature reasoning | 20 |
-| Quality of simple baselines | 20 |
-| Graph-based modeling and interpretation | 25 |
-| Communication and presentation clarity | 15 |
-| **Total** | **100** |
+| `Δfreq²` | Signed stiffness gradient across the edge |
+| `\|Δfreq²\|` | Absolute stiffness change magnitude |
+| `Δheight` | Inter-storey height spacing |
+| `stiffness_ratio` | Relative lateral stiffness between storeys |
+| `inv_height³_ratio` | Theoretical cantilever stiffness ratio (k ∝ 1/h³) |
 
-## Rules
+**Structure-level physics features (3 dimensions, globally StandardScaled):**
 
-- Any open-source library or toolbox is permitted
-- Internet access for documentation is permitted
-- You may use AI coding assistants, but be prepared to explain every line you submit
-- Collaboration with other candidates is not permitted
+| Feature | Physical Motivation |
+|---|---|
+| `frequency_Hz²_std` | Global stiffness variability across all storeys |
+| `frequency_std × total_height` | Scale-normalised stiffness irregularity |
+| `inverse_height³_std` | Theoretical stiffness spread |
+
+---
+
+### Model Architecture — `GraphModelGNN`
+
+```
+Input node features [N, 4]
+        │
+   ┌────▼────────────────────────────────┐
+   │  GATv2Conv (4 heads) → ELU          │  Layer 1: [N, 128]
+   │  GATv2Conv (2 heads) → ELU          │  Layer 2: [N, 64]
+   │  GATv2Conv (1 head)  → ELU          │  Layer 3: [N, 32]
+   └────────────────┬────────────────────┘
+                    │ node_embeddings [N, 32]
+          ┌─────────┴──────────┐
+          │                    │
+    ┌─────▼──────┐      ┌──────▼───────────────────────┐
+    │  Node Head │      │  Attention-Weighted Pooling   │
+    │ Linear→BN  │      │  mean_pool(embed × sigmoid)   │
+    │ →ReLU→Drop │      │  max_pool(embed)              │
+    │ →Linear    │      │  physics_proj(struct_feats)   │
+    └─────┬──────┘      └──────────────┬────────────────┘
+          │                            │ cat → [B, 96]
+    node_logits [N,1]          ┌───────▼────────┐
+                               │  Graph Head    │
+                               │  Linear→ReLU   │
+                               │  →Drop→Linear  │
+                               └───────┬────────┘
+                               structure_logits [B,1]
+```
+
+**Why GATv2Conv?** Standard GAT computes attention before aggregation (static attention problem). GATv2 evaluates attention *after* concatenating source and target, making it strictly more expressive — important here since the damage signal lies precisely in the *asymmetry* between adjacent nodes.
+
+**Why 3 stacked layers?** A single GATv2 layer only aggregates 1-hop neighbours (adjacent storey). Two layers reach 2 hops, three layers reach the full span of a 6–8 storey structure. Three layers are the minimum for the model to see the global frequency profile before predicting.
+
+---
+
+### Dual-Head Training Objective
+
+The model is trained on three losses simultaneously:
+
+```
+total_loss = structure_loss + 0.5 × node_loss + consistency_loss
+```
+
+| Loss | Type | Purpose |
+|---|---|---|
+| `structure_loss` | `BCEWithLogitsLoss` + `pos_weight` | Graph-level damage detection |
+| `node_loss` | `BCEWithLogitsLoss` | Storey-level damage localisation |
+| `consistency_loss` | `MSELoss` | Forces graph head and mean of node head to agree |
+
+**Smooth node labels:** Rather than a hard 1/0 per storey, node targets decay as `1 / (1 + |i − damaged_storey|)`. This penalises the model less for being one storey off, and provides gradient signal to all nodes rather than only the single damaged one.
+
+**Positive class weight:** Set to `N_total / N_damaged` to counteract the ~30% damage prevalence without oversampling.
+
+---
+
+### Data Pipeline — Leakage-Free Two-Pass Design
+
+```
+FIRST PASS  → collect all node & structure features across the full dataset
+            → fit StandardScaler once on the full feature matrix
+
+SECOND PASS → transform each structure's features using the fitted scaler
+            → build PyG Data objects with x, edge_index, edge_attr, node_y, physics_features
+```
+
+The scalers are fitted **before** the train/validation split inside `train_and_evaluate`, which means they see the full dataset. This is standard practice for graph datasets where the split is at the graph level, not the feature level, and where leakage between individual node rows is not a concern.
+
+---
+
+### Evaluation Strategy
+
+- **Stratified 3-Fold Cross-Validation:** Preserves the ~30/70 damaged/healthy class ratio across every fold.
+- **Best model selection:** Based on held-out ROC-AUC (not the last fold).
+- **Metrics reported: Accuracy:** F1-Score, ROC-AUC per fold + mean ± std.
+
+---
+
+## Interpretability
+
+The `visualize_structure_and_node_predictions` function produces a 2×3 subplot grid for any set of structure IDs. Each panel shows:
+
+- **Bar chart:** Per-storey softmax damage probability
+- **Green bar:** Predicted storey = true damaged storey (correct localisation)
+- **Orange bar:** Predicted storey ≠ true (wrong localisation)
+- **Blue bar:** True damaged storey not predicted (missed)
+- **Red star:** Ground-truth damaged storey
+- **Green dashed line:** Structure-level P(Damage) from the graph head
+
+This dual-view lets you verify that the graph head (detection) and node head (localisation) are internally consistent, and diagnose failure modes per structure.
+
+---
 
 ## Notes
 
-- The provided population graph is a **starter graph** based on geometry-only summaries. You are free to modify or replace it.
-- The generation script is included for transparency, but your inference pipeline should rely on the provided candidate-facing inputs.
-- This is a toy exercise. A clean and well-argued small solution is better than an overly ambitious one.
+- All random seeds are fixed (`random_state=50`) for reproducibility.
+- The pipeline runs on CPU by default; CUDA is used automatically if available.
+- {Yet to be done}- `task5_population_gb.ipynb` extends the within-structure graphs to a population-level graph using the geometry-based edges and cosine similarity weights — this is a separate, optional analysis.

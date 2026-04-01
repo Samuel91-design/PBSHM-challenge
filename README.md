@@ -1,10 +1,36 @@
-# Structure-Informed GNN for Population-Based Structural Health Monitoring
 
-A physics-aware Graph Neural Network (GNN) pipeline for **damage detection** and **damage localisation** across a synthetic population of multi-storey structures. The project progresses from exploratory data analysis through supervised/unsupervised baselines to a full graph-based model, following the Population-Based SHM (PBSHM) paradigm.
+**DIAMOND A-DC PBSHM Coding Challenge**
 
 ---
 
+- **Name**: Ernest Toochukwu, Samuel
+- **Date**: 02-04-2026
+
+---
+## Population-Based Structural Health Monitoring (PBSHM)
+
+---
+A Graph Neural Network (GNN) pipeline for **damage detection** and **damage localisation** across a synthetic population of multi-storey structures. The project progresses from exploratory data analysis through supervised/unsupervised baselines to a full graph-based model, following the Population-Based SHM (PBSHM) paradigm.
+
+---
+### Objective
+
+- Propose which raw or derived features might be damage-sensitive
+
+- Build a simple baseline model for damage detection using fixed-length summaries of each structure.
+
+- Implement a simpler unsupervised / anomaly exploratory method that does not rely on a graph neural network.
+
+- Discuss whether damaged structures appear separable and what the limitations of these simpler methods are.
+
+- Implement a graph-based model that uses the within-structure graph and compare it to your simpler baselines.
+
+- Detect whether a structure is damaged using measurement-like features and graph structure.
+
+---
 ## Repository Layout
+
+The repository is organised as follows:
 
 ```
 ├── main_summary.ipynb                   # Master notebook — runs all tasks end-to-end

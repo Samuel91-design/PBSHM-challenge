@@ -61,7 +61,6 @@ pip install torch-geometric
 pip install scikit-learn pandas numpy matplotlib seaborn networkx
 ```
 
-> **GPU:** The training loop auto-detects CUDA. CPU is fully supported for this dataset size.
 
 ### 2. Run Everything (Recommended)
 
@@ -144,7 +143,7 @@ Input node features [N, 4]
                                structure_logits [B,1]
 ```
 
-**Why GATv2Conv?** Standard GAT computes attention before aggregation (static attention problem). GATv2 evaluates attention *after* concatenating source and target, making it strictly more expressive — important here since the damage signal lies precisely in the *asymmetry* between adjacent nodes.
+Standard GAT computes attention before aggregation (static attention problem). GATv2 evaluates attention *after* concatenating source and target, making it strictly more expressive, important here since the damage signal lies precisely in the *asymmetry* between adjacent nodes.
 
 **Why 3 stacked layers?** A single GATv2 layer only aggregates 1-hop neighbours (adjacent storey). Two layers reach 2 hops, three layers reach the full span of a 6–8 storey structure. Three layers are the minimum for the model to see the global frequency profile before predicting.
 
